@@ -55,8 +55,6 @@ class Rtorrent extends TorrentClient
             'd.multicall2',
             array('', 'main', 'd.hash=', 'd.state=', 'd.complete=', 'd.message=')
         );
-        // d.is_open
-        // d.is_active
         if (empty($response)) {
             return false;
         }
@@ -77,7 +75,7 @@ class Rtorrent extends TorrentClient
     public function addTorrent($torrentFilePath, $savePath = '')
     {
         // if (!empty($savePath)) {
-        //     $this->makeRequest('directory.default.set', array('', $savePath));
+        //     $this->makeRequest('directory.default.set', array('', rawurlencode($savePath)));
         // }
         $torrentFile = file_get_contents($torrentFilePath);
         if ($torrentFile === false) {
@@ -92,7 +90,7 @@ class Rtorrent extends TorrentClient
                 '',
                 $torrentFile,
                 'd.delete_tied=',
-                'd.directory.set=' . $savePath
+                'd.directory.set=' . rawurlencode($savePath)
             )
         );
     }
@@ -102,6 +100,7 @@ class Rtorrent extends TorrentClient
         if (empty($label)) {
             return false;
         }
+        $label = rawurlencode($label);
         foreach ($hashes as $hash) {
             $this->makeRequest('d.custom1.set', array($hash, $label));
         }
