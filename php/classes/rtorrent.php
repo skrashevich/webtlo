@@ -28,7 +28,6 @@ class Rtorrent extends TorrentClient
     public function makeRequest($command, $params = '')
     {
         $request = xmlrpc_encode_request($command, $params, array('encoding' => 'UTF-8'));
-        $request = str_replace('&#10;', '', $request); // ???
         $header = array(
             'Content-type: text/xml',
             'Content-length: ' . strlen($request)
@@ -46,7 +45,13 @@ class Rtorrent extends TorrentClient
             return false;
         }
         curl_close($ch);
-        return xmlrpc_decode(str_replace('i8>', 'i4>', $response));
+        $response = xmlrpc_decode(str_replace('i8>', 'i4>', $response));
+        if (isset($response['faultCode'])) {
+            Log::append('Error: ' . $response['faultString']);
+            return false;
+        }
+        // return 0 on success
+        return $response;
     }
 
     public function getTorrents()
@@ -55,7 +60,7 @@ class Rtorrent extends TorrentClient
             'd.multicall2',
             array('', 'main', 'd.hash=', 'd.state=', 'd.complete=', 'd.message=')
         );
-        if (empty($response)) {
+        if ($response === false) {
             return false;
         }
         $torrents = array();
@@ -74,23 +79,20 @@ class Rtorrent extends TorrentClient
 
     public function addTorrent($torrentFilePath, $savePath = '')
     {
-        // if (!empty($savePath)) {
-        //     $this->makeRequest('directory.default.set', array('', rawurlencode($savePath)));
-        // }
-        $torrentFile = file_get_contents($torrentFilePath);
+        $torrentFile = fopen($torrentFilePath, 'br');
         if ($torrentFile === false) {
             Log::append('Error: не удалось загрузить файл ' . $torrentFilePath);
             return false;
         }
-        $torrentFile = base64_encode($torrentFile);
+        $torrentFile = stream_get_contents($torrentFile);
         xmlrpc_set_type($torrentFile, 'base64');
         return $this->makeRequest(
-            'load.raw_start_verbose',
+            'load.raw_start',
             array(
                 '',
                 $torrentFile,
                 'd.delete_tied=',
-                'd.directory.set=' . rawurlencode($savePath)
+                'd.directory.set=' . $savePath
             )
         );
     }
