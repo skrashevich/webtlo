@@ -27,7 +27,7 @@ class Rtorrent extends TorrentClient
      */
     public function makeRequest($command, $params = '')
     {
-        $request = xmlrpc_encode_request($command, $params, array('encoding' => 'UTF-8'));
+        $request = xmlrpc_encode_request($command, $params, array('escaping' => 'markup', 'encoding' => 'UTF-8'));
         $header = array(
             'Content-type: text/xml',
             'Content-length: ' . strlen($request)
@@ -92,7 +92,7 @@ class Rtorrent extends TorrentClient
                 '',
                 $torrentFile,
                 'd.delete_tied=',
-                'd.directory.set=' . $savePath
+                'd.directory.set=' . addcslashes($savePath, ' ')
             )
         );
     }
@@ -125,6 +125,14 @@ class Rtorrent extends TorrentClient
     public function removeTorrents($hashes, $deleteLocalData = false)
     {
         foreach ($hashes as $hash) {
+            $executeDeleteLocalData = array();
+            if ($deleteLocalData) {
+                $dataPath = $this->makeRequest('d.data_path', $hash);
+                $executeDeleteLocalData = array(
+                    'methodName' => 'execute2',
+                    'params' => array('', 'rm', '-rf', '--', $dataPath)
+                );
+            }
             $this->makeRequest(
                 'system.multicall',
                 array(
@@ -140,7 +148,8 @@ class Rtorrent extends TorrentClient
                         array(
                             'methodName' => 'd.erase',
                             'params' => array($hash)
-                        )
+                        ),
+                        $executeDeleteLocalData
                     )
                 )
             );
