@@ -46,8 +46,21 @@ class Rtorrent extends TorrentClient
         }
         curl_close($ch);
         $response = xmlrpc_decode(str_replace('i8>', 'i4>', $response));
-        if (isset($response['faultCode'])) {
-            Log::append('Error: ' . $response['faultString']);
+        if (is_array($response)) {
+            foreach ($response as $keyName => $responseData) {
+                if (is_array($responseData)) {
+                    if (array_key_exists('faultCode', $responseData)) {
+                        $faultString = $responseData['faultString'];
+                        break;
+                    }
+                } elseif ($keyName == 'faultString') {
+                    $faultString = $responseData;
+                    break;
+                }
+            }
+        }
+        if (isset($faultString)) {
+            Log::append('Error: ' . $faultString);
             return false;
         }
         // return 0 on success
@@ -79,6 +92,11 @@ class Rtorrent extends TorrentClient
 
     public function addTorrent($torrentFilePath, $savePath = '')
     {
+        $makeDirectory = array('', 'mkdir', '-p', '--', $savePath);
+        if (empty($savePath)) {
+            $savePath = '$directory.default=';
+            $makeDirectory = array('', 'true');
+        }
         $torrentFile = fopen($torrentFilePath, 'br');
         if ($torrentFile === false) {
             Log::append('Error: не удалось загрузить файл ' . $torrentFilePath);
@@ -87,12 +105,23 @@ class Rtorrent extends TorrentClient
         $torrentFile = stream_get_contents($torrentFile);
         xmlrpc_set_type($torrentFile, 'base64');
         return $this->makeRequest(
-            'load.raw_start',
+            'system.multicall',
             array(
-                '',
-                $torrentFile,
-                'd.delete_tied=',
-                'd.directory.set=' . addcslashes($savePath, ' ')
+                array(
+                    array(
+                        'methodName' => 'execute2',
+                        'params' => $makeDirectory
+                    ),
+                    array(
+                        'methodName' => 'load.raw_start',
+                        'params' => array(
+                            '',
+                            $torrentFile,
+                            'd.delete_tied=',
+                            'd.directory.set=' . addcslashes($savePath, ' ')
+                        )
+                    )
+                )
             )
         );
     }
@@ -125,13 +154,12 @@ class Rtorrent extends TorrentClient
     public function removeTorrents($hashes, $deleteLocalData = false)
     {
         foreach ($hashes as $hash) {
-            $executeDeleteLocalData = array();
+            $executeDeleteLocalData = array('', 'true');
             if ($deleteLocalData) {
                 $dataPath = $this->makeRequest('d.data_path', $hash);
-                $executeDeleteLocalData = array(
-                    'methodName' => 'execute2',
-                    'params' => array('', 'rm', '-rf', '--', $dataPath)
-                );
+                if (!empty($dataPath)) {
+                    $executeDeleteLocalData =  array('', 'rm', '-rf', '--', $dataPath);
+                }
             }
             $this->makeRequest(
                 'system.multicall',
@@ -149,7 +177,10 @@ class Rtorrent extends TorrentClient
                             'methodName' => 'd.erase',
                             'params' => array($hash)
                         ),
-                        $executeDeleteLocalData
+                        array(
+                            'methodName' => 'execute2',
+                            'params' => $executeDeleteLocalData
+                        )
                     )
                 )
             );
