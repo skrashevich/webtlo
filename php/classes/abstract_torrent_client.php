@@ -50,6 +50,7 @@ abstract class TorrentClient
         $this->port = $port;
         $this->login = $login;
         $this->password = $password;
+        $this->ch = curl_init();
     }
 
     /**
