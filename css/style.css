@@ -45,7 +45,7 @@ h2 {
 }
 
 h3 {
-	margin: 15px 0 10px 0;
+	margin: 15px 0 10px;
 	font-weight: bold;
 }
 
@@ -210,7 +210,7 @@ li.menu.ui-tabs-active {
 .filter_block {
 	display: inline-block;
 	vertical-align: top;
-	margin: 5px 10px 0 10px;
+	margin: 5px 10px 0;
 }
 
 .filter_block fieldset {
@@ -303,7 +303,7 @@ li.menu.ui-tabs-active {
 
 #topics {
 	margin: 0;
-	padding: 5px 10px 0 10px;
+	padding: 5px 10px 0;
 	flex: 1;
 	overflow-y: auto;
 	height: calc(100% - 92px);
@@ -370,7 +370,7 @@ li.menu.ui-tabs-active {
 }
 
 .sub_settings h3:first-child {
-	margin: 5px 0 10px 0;
+	margin: 5px 0 10px;
 }
 
 .block-settings {
@@ -463,11 +463,11 @@ li.menu.ui-tabs-active {
 
 #add-forum {
 	width: calc(100% - 25px);
-	margin: 0 0 20px 0;
+	margin: 0 0 20px;
 }
 
 #remove-forum {
-	margin: 0 0 15px 0;
+	margin: 0 0 15px;
 }
 
 #list-forums {
@@ -487,8 +487,8 @@ li.menu.ui-tabs-active {
 
 .footnote {
 	font-size: small;
-	margin: 15px 0 0 0;
-	padding: 5px 0 0 0;
+	margin: 15px 0 0;
+	padding: 5px 0 0;
 	border-top: 1px solid #000;
 }
 
@@ -506,7 +506,7 @@ li.menu.ui-tabs-active {
 
 #reports-content {
 	margin: 0;
-	padding: 5px 10px 0 10px;
+	padding: 5px 10px 0;
 	/* padding: 0; */
 	flex: 1;
 	overflow-y: auto;
