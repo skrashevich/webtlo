@@ -6,6 +6,7 @@ namespace KeepersTeam\Webtlo\Module\Report;
 
 use DateTimeImmutable;
 use Exception;
+use KeepersTeam\Webtlo\Config\Credentials;
 use KeepersTeam\Webtlo\Config\ReportSend;
 use KeepersTeam\Webtlo\DB;
 use KeepersTeam\Webtlo\DTO\ForumObject;
@@ -58,6 +59,7 @@ final class CreateReport
     public function __construct(
         private readonly DB              $db,
         private readonly Settings        $settings,
+        private readonly Credentials     $cred,
         private readonly ReportSend      $reportSend,
         private readonly UpdateTime      $tableUpdate,
         private readonly Forums          $tableForums,
@@ -278,6 +280,7 @@ final class CreateReport
             'enabled'             => (bool) $config['automation']['reports'],
             'send_report_api'     => (bool) $config['reports']['send_report_api'],
             'send_summary_report' => (bool) $config['reports']['send_summary_report'],
+            'exclude_authored'    => (bool) $config['reports']['exclude_authored'],
             'unset_other_forums'  => (bool) $config['reports']['unset_other_forums'],
             'unset_other_topics'  => (bool) $config['reports']['unset_other_topics'],
         ];
@@ -386,6 +389,9 @@ final class CreateReport
         $split_pattern = '- из них раздач %s10 сидов: [b]%d[/b] шт. (%s)';
 
         $rows[] = sprintf('Всего хранимых раздач: [b]%s[/b] шт. (%s)', $val['keep_count'], $this->boldBytes($val['keep_size']));
+        if ($val['authored_count'] > 0) {
+            $rows[] = sprintf('- из них авторских раздач: [b]%s[/b] шт. (%s)', $val['authored_count'], $this->boldBytes($val['authored_size']));
+        }
         if ($val['less10_count'] > 0 && $val['more10_count'] > 0) {
             $rows[] = sprintf($split_pattern, '&#8804;', $val['less10_count'], $this->boldBytes($val['less10_size']));
         }
@@ -480,6 +486,8 @@ final class CreateReport
     private function calcSummary(array $stored): array
     {
         $sumKeys = [
+            'authored_count', // Раздачи за авторством пользователя
+            'authored_size',  // Раздачи за авторством пользователя
             'keep_count',   // Общее кол-во хранимых раздач
             'keep_size',    // Общий вес хранимых раздач
             'less10_count', // Кол-во хранимых раздач с менее 10 сидов
@@ -528,10 +536,12 @@ final class CreateReport
         $values = $this->db->query(
             "SELECT
                 forum_id,
+                SUM(CASE WHEN authored_by_user      THEN 1 ELSE 0 END) authored_count,
                 SUM(CASE WHEN done = 1              THEN 1 ELSE 0 END) keep_count,
                 SUM(CASE WHEN done = 1 AND av <= 10 THEN 1 ELSE 0 END) less10_count,
                 SUM(CASE WHEN done = 1 AND av >  10 THEN 1 ELSE 0 END) more10_count,
                 SUM(CASE WHEN done < 1              THEN 1 ELSE 0 END) dl_count,
+                SUM(CASE WHEN authored_by_user      THEN topic_size ELSE 0 END) authored_size,
                 SUM(CASE WHEN done = 1              THEN topic_size ELSE 0 END) keep_size,
                 SUM(CASE WHEN done = 1 AND av <= 10 THEN topic_size ELSE 0 END) less10_size,
                 SUM(CASE WHEN done = 1 AND av >  10 THEN topic_size ELSE 0 END) more10_size,
@@ -541,7 +551,8 @@ final class CreateReport
                     tp.forum_id,
                     (tp.seeders * 1.0 / tp.seeders_updates_today) av,
                     tp.size topic_size,
-                    tr.done
+                    tr.done,
+                    CASE WHEN tp.poster = ? THEN 1 END AS authored_by_user
                 FROM Topics tp
                 INNER JOIN (
                     SELECT info_hash, MAX(done) done
@@ -552,7 +563,7 @@ final class CreateReport
                 WHERE tp.forum_id IN ($includeForums->keys)
             )
             GROUP BY forum_id",
-            array_merge($excludeClients->values, $includeForums->values),
+            [$this->cred->userId, ...$excludeClients->values, ...$includeForums->values],
             PDO::FETCH_ASSOC | PDO::FETCH_UNIQUE
         );
 
@@ -609,6 +620,7 @@ final class CreateReport
                     tp.name topic_name,
                     tp.size topic_size,
                     tp.status topic_status,
+                    tp.poster topic_author,
                     MAX(tr.done) AS done
                 FROM Topics tp
                 INNER JOIN Torrents tr ON tr.info_hash = tp.info_hash
@@ -616,11 +628,18 @@ final class CreateReport
                 GROUP BY tp.id, tp.info_hash, tp.forum_id, tp.name, tp.size, tp.status
                 ORDER BY tp.id
             ",
-            array_merge([$forumId], $excludeClients->values),
+            [$forumId, ...$excludeClients->values],
         );
 
         if (!count($topics)) {
             throw new EmptyFoundTopicsException('В БД не найдены хранимые раздачи подраздела.', $forumId);
+        }
+
+        // Если включена опция исключения авторских раздач, фильтруем раздачи.
+        if ($this->reportSend->excludeAuthored) {
+            $topics = array_filter($topics, function($topic) {
+                return $topic['topic_author'] !== $this->cred->userId;
+            });
         }
 
         $this->cache[$forumId] = $topics;
