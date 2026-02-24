@@ -190,7 +190,7 @@ final class Render
                 $subForum->dataFolder,
                 $subForum->subFolderType?->value,
                 (int) $subForum->hideTopics,
-                $subForum->controlPeers,
+                TopicControl::renderPeersLimit($subForum->controlPeers),
                 (int) $subForum->reportExclude,
             );
 
@@ -260,7 +260,7 @@ final class Render
                 $client->credentials->username ?? '',
                 $client->credentials->password ?? '',
                 (int) $client->secure,
-                $client->controlPeers,
+                TopicControl::renderPeersLimit($client->controlPeers),
                 (int) $client->exclude,
             );
 

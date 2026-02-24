@@ -12,6 +12,20 @@ use KeepersTeam\Webtlo\Enum\ControlPeerLimitPriority as Priority;
 final class TopicControl
 {
     /**
+     * Значение отключённой регулировки для подраздела/торрент-клиента.
+     */
+    public const Disabled = -1;
+
+    /**
+     * Эквивалент пустой строки для регулировки.
+     * При таком значении используются настройки регулировки по-умолчанию.
+     *
+     * Необходимо, потому что пустая строка конвертируется в ноль.
+     * А ноль это другое по смыслу значение.
+     */
+    public const EmptyValue = -2;
+
+    /**
      * Сид - пользователь, сидирующий раздачу.
      * Лич - пользователь, который либо качает раздачу, либо скачал только часть раздачи.
      * Сид-хранитель - это сид, из числа хранителей, который в данный момент сидирует раздачу.
@@ -44,4 +58,13 @@ final class TopicControl
         public readonly int      $daysUntilUnseeded,
         public readonly int      $maxUnseededCount,
     ) {}
+
+    public static function renderPeersLimit(int $controlPeers): string
+    {
+        if ($controlPeers === self::EmptyValue) {
+            return '';
+        }
+
+        return (string) $controlPeers;
+    }
 }
