@@ -22,7 +22,7 @@ final class Helper
             $bytes = $pow = 0;
         } else {
             $pow   = ($size >= $base ** $maxPow) ? $maxPow : (int) floor(log($size, $base));
-            $bytes = (int) round($size / ($base ** $pow), 2);
+            $bytes = round($size / ($base ** $pow), 2);
         }
 
         return sprintf('%s %s', $bytes, $sizeName[$pow]);
