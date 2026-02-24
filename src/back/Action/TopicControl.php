@@ -72,7 +72,7 @@ final class TopicControl
             $clientTag = $clientOptions->name;
 
             $clientControlPeers = $clientOptions->controlPeers;
-            if ($clientControlPeers === -1) {
+            if ($clientControlPeers === ConfigControl::Disabled) {
                 $this->logger->notice("Для клиента $clientTag отключена регулировка.");
 
                 continue;
@@ -114,13 +114,12 @@ final class TopicControl
                 }
 
                 // Для "прочих" значение всегда одно.
-                $subControlPeers = -2;
+                $subControlPeers = ConfigControl::EmptyValue;
                 if (is_int($group)) {
-                    // $subControlPeers = PeerCalc::getForumLimit(config: $config, group: $group);
                     $subControlPeers = $this->subForums->getControlPeers(subForumId: $group);
 
                     // Пропускаем исключённые из регулировки подразделы.
-                    if ($subControlPeers === -1) {
+                    if ($subControlPeers === ConfigControl::Disabled) {
                         $this->excludedForums[] = $group;
 
                         continue;

@@ -55,7 +55,7 @@ final class SubForums
      */
     public function getControlPeers(int $subForumId): int
     {
-        return $this->getSubForum(subForumId: $subForumId)->controlPeers ?? -2;
+        return $this->getSubForum(subForumId: $subForumId)->controlPeers ?? TopicControl::EmptyValue;
     }
 
     public function getKeyObject(): KeysObject

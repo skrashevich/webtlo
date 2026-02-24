@@ -276,7 +276,7 @@ final class ConfigServiceProvider extends AbstractServiceProvider
                         subFolderType: SubFolderType::tryFrom((int) $ini->read($section, 'data-sub-folder')),
                         hideTopics   : (bool) $ini->read($section, 'hide-topics'),
                         reportExclude: (bool) $ini->read($section, 'exclude'),
-                        controlPeers : (int) ($ini->read($section, 'control-peers') ?: -2)
+                        controlPeers : (int) ($ini->read($section, 'control-peers') ?: TopicControl::EmptyValue)
                     );
                 }
             }
@@ -328,10 +328,12 @@ final class ConfigServiceProvider extends AbstractServiceProvider
                 /**
                  * Регулировка раздач в торрент-клиенте.
                  *
+                 * @see TopicControl
+                 *
                  * - -1 - регулировка подраздела отключена;
                  * - -2 == пустая строка - пустое значение ~= не учитывать значение.
                  */
-                $controlPeers = (int) ($ini->read($section, 'control_peers') ?: -2);
+                $controlPeers = (int) ($ini->read($section, 'control_peers') ?: TopicControl::EmptyValue);
 
                 // Исключение раздач торрент-клиента при отправке отчётов.
                 $exclude = (bool) $ini->read($section, 'exclude', 0);

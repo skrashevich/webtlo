@@ -29,6 +29,6 @@ final class SubForum
         public readonly ?SubFolderType $subFolderType = null,
         public readonly bool           $hideTopics = true,
         public readonly bool           $reportExclude = false,
-        public readonly int            $controlPeers = -2,
+        public readonly int            $controlPeers = TopicControl::EmptyValue,
     ) {}
 }

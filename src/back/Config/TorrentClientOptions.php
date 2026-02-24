@@ -26,7 +26,7 @@ final class TorrentClientOptions
         public readonly ?BasicAuth $credentials = null,
         public readonly Timeout    $timeout = new Timeout(),
         public readonly bool       $exclude = false,
-        public readonly int        $controlPeers = -2,
+        public readonly int        $controlPeers = TopicControl::EmptyValue,
         public readonly array      $extra = [],
     ) {
         $tag = $this->name ?: $this->type->name;

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace KeepersTeam\Webtlo\Module\Control;
 
 use KeepersTeam\Webtlo\Config\TopicControl;
-use KeepersTeam\Webtlo\Config\TopicControl as ConfigControl;
 use KeepersTeam\Webtlo\Enum\ControlPeerLimitPriority;
 use KeepersTeam\Webtlo\Enum\DesiredStatusChange;
 use KeepersTeam\Webtlo\External\Data\TopicPeers;
@@ -14,25 +13,7 @@ final class PeerCalc
 {
     private ?int $peerLimit = null;
 
-    public function __construct(private readonly ConfigControl $config) {}
-
-    /**
-     * @param array<string, mixed> $clientProps
-     */
-    public static function getClientLimit(array $clientProps): int
-    {
-        return ($clientProps['control_peers'] !== '') ? (int) $clientProps['control_peers'] : -2;
-    }
-
-    /**
-     * @param array<string, mixed>[] $config
-     */
-    public static function getForumLimit(array $config, int|string $group): int
-    {
-        $subControlPeers = $config['subsections'][$group]['control_peers'] ?? -2;
-
-        return ($subControlPeers !== '') ? (int) $subControlPeers : -2;
-    }
+    public function __construct(private readonly TopicControl $config) {}
 
     /**
      * Определяем лимит пиров для регулировки в зависимости от настроек для подраздела и торрент клиента.
@@ -43,16 +24,16 @@ final class PeerCalc
         $peerLimit = $this->getPeerLimit();
 
         // Задан лимит для клиента и для раздела.
-        if ($clientControlPeers > -1 && $subsectionControlPeers > -1) {
+        if ($clientControlPeers > TopicControl::Disabled && $subsectionControlPeers > TopicControl::Disabled) {
             if ($this->config->peerLimitPriority === ControlPeerLimitPriority::Subsection) {
                 $peerLimit = $subsectionControlPeers;
             } else {
                 $peerLimit = $clientControlPeers;
             }
-        } elseif ($clientControlPeers > -1) {
+        } elseif ($clientControlPeers > TopicControl::Disabled) {
             // Задан лимит только для клиента.
             $peerLimit = $clientControlPeers;
-        } elseif ($subsectionControlPeers > -1) {
+        } elseif ($subsectionControlPeers > TopicControl::Disabled) {
             // Задан лимит только для раздела.
             $peerLimit = $subsectionControlPeers;
         }

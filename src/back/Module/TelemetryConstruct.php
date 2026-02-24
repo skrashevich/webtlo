@@ -76,7 +76,7 @@ final class TelemetryConstruct
         ];
 
         // Регулировка по подразделам.
-        $subsections = array_filter($this->subForums->params, static fn($el) => $el->controlPeers !== -2);
+        $subsections = array_filter($this->subForums->params, static fn($el) => $el->controlPeers !== TopicControl::EmptyValue);
         $subsections = array_map(static fn($el) => $el->controlPeers, $subsections);
 
         ksort($subsections);
