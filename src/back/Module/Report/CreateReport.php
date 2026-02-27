@@ -17,7 +17,6 @@ use KeepersTeam\Webtlo\Enum\UpdateMark;
 use KeepersTeam\Webtlo\Enum\UpdateStatus;
 use KeepersTeam\Webtlo\Helper;
 use KeepersTeam\Webtlo\Storage\KeysObject;
-use KeepersTeam\Webtlo\Storage\Table\Forums;
 use KeepersTeam\Webtlo\Storage\Table\UpdateTime;
 use KeepersTeam\Webtlo\WebTLO;
 use PDO;
@@ -60,7 +59,6 @@ final class CreateReport
         private readonly ReportSend      $reportSend,
         private readonly Telemetry       $telemetry,
         private readonly UpdateTime      $tableUpdate,
-        private readonly Forums          $tableForums,
         private readonly WebTLO          $webtlo,
         private readonly LoggerInterface $logger,
     ) {
@@ -145,6 +143,11 @@ final class CreateReport
 
         // Вытаскиваем из базы хранимое.
         $userStored = $this->getStoredForumValues($forum->id);
+        if (!count($userStored)) {
+            throw new RuntimeException(
+                "В БД отсутствуют данные о раздачах хранимого подраздела $forum->id. Возможно, нужно выполнить обновление сведений."
+            );
+        }
 
         // Создаём заголовок отчёта по подразделу.
         $messageHeader = $this->prepareMessageHeader($userStored);
@@ -241,26 +244,21 @@ final class CreateReport
 
         static $urlPattern = '[url=viewforum.php?f=%s&keeper_info=&report=%s][u]%s[/u][/url]';
 
-        // Разбираем хранимое
+        // Перебираем подразделы, отсортированные по имени.
         $savedSubsections = [];
-        foreach ($this->getForums() as $forumId) {
+        foreach ($this->subForums->getNameSorted() as $subForum) {
             // Исключаем подразделы, согласно конфига.
-            if ($this->isForumExcluded($forumId)) {
+            if ($this->isForumExcluded(forumId: $subForum->id)) {
                 continue;
             }
 
-            $forumValues = $this->stored[$forumId] ?? [];
+            $forumValues = $this->getStoredForumValues(forumId: $subForum->id);
             if (!count($forumValues)) {
                 continue;
             }
 
-            $forum = $this->tableForums->getForum(forumId: $forumId);
-            if ($forum === null) {
-                throw new RuntimeException("Нет данных о хранимом подразделе №$forumId");
-            }
-
             // Ссылка на отчёт подраздела.
-            $leftPart = sprintf($urlPattern, $forumId, $this->auth->userId, $forum->name);
+            $leftPart = sprintf($urlPattern, $subForum->id, $this->auth->userId, $subForum->name);
 
             // Ссылка на свой пост(отчёт) и количество + объём раздач.
             $rightPart = sprintf('%s шт. (%s)', $forumValues['keep_count'], $this->bytes($forumValues['keep_size']));
@@ -268,7 +266,7 @@ final class CreateReport
             // Записываем данные о подразделе в сводный отчёт.
             $savedSubsections[] = "[*]$leftPart - $rightPart";
 
-            unset($forumId, $forumValues, $leftPart, $rightPart);
+            unset($forumValues, $leftPart, $rightPart);
         }
 
         // формируем сводный отчёт
@@ -488,15 +486,7 @@ final class CreateReport
      */
     private function getStoredForumValues(int $forumId): array
     {
-        $values = $this->stored[$forumId] ?? [];
-
-        if (empty($values)) {
-            throw new RuntimeException(
-                "В БД отсутствуют данные о раздачах хранимого подраздела $forumId. Возможно, нужно выполнить обновление сведений."
-            );
-        }
-
-        return $values;
+        return $this->stored[$forumId] ?? [];
     }
 
     /**
